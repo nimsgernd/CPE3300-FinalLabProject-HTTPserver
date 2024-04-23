@@ -2,7 +2,7 @@
  * HTTP Server
  * CPE 3300, Daniel Nimsgern
  *
- * Build with gcc -o tftpclient tftpclient.c
+ * Build with gcc -o httpwebserver httpwebserver.c
  *****************************************************************************/
 
 /*=============================================================================
@@ -25,7 +25,13 @@
 
 /* Network definitions */
 #define DEFAULT_HTTP_PORT   (int)   80
-#define HTTP_MAX_MSG_SIZE   (int)   50000
+#define HTTP_MAX_MSG_SIZE   (int)   1000000
+
+/* HTTP definitions */
+#define HTTP_BASE_PATH		(char*) "./httpfiles"
+#define MAX_PATH_LENGTH		(int)	1000
+#define GET_REQUEST			(char*) "GET"
+#define PUT_REQUEST			(char*) "PUT"
 
 /* CLI ESC Codes */
 #define ESC_BLACK_TXT       (char*) "\033[1;30m"
@@ -131,9 +137,13 @@ int main(int argc, char** argv) {
 	
 	// go into forever loop and echo whatever message is received
 	// to console and back to source
-	char* buffer = (HTTP_MAX_MSG_SIZE, sizeof(char));
+	char* buffer = calloc(HTTP_MAX_MSG_SIZE*3, sizeof(char));
+	char* command = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
+	char* path = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
+	char* version = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
 	struct sockaddr_in callingDevice;
 	socklen_t callingDevice_len;
+	FILE* file;
     int fileLen;
 	int bytesRead;
     int bytesWritten;
@@ -164,7 +174,11 @@ int main(int argc, char** argv) {
             // connection is closed
 			while(1)
 			{
-				// read message								
+				char* filePath = calloc(MAX_PATH_LENGTH, sizeof(char));
+				char* response = calloc(HTTP_MAX_MSG_SIZE*6, sizeof(char));
+				int responseLen;
+
+				// read message
 				bytesRead = read(connection, buffer, HTTP_MAX_MSG_SIZE-1);
 						
 				if (bytesRead == 0)
@@ -173,28 +187,92 @@ int main(int argc, char** argv) {
 					close(connection);
 					break;  // break the inner while loop
 				}
-						
-				// see if client wants us to disconnect
-				if (strncmp(buffer,"quit",4)==0)
-				{
-					printf("====Server Disconnecting====\n");
-					close(connection);
-					break;  // break the inner while loop
-				}
 			
 				// print info to console
 				printf("Received HTTP request\n");
 
-				// send data to HTTP client
-				if ( (bytesWritten = write(connection, buffer, fileLen)) < 0 )
+				// Parse request
+				sscanf(buffer, "%s %s %s", command, path, version);
+				printf("%s %s %s\n", command, path, version);
+
+				// char* path = strtok(path, "?");
+				// char* rawparam = strtok(NULL, "?");
+
+				// char* param = strtok(rawparam, "&");
+				// while (param != NULL)
+				// {
+				// 	int i = 0;
+				// 	char name[HTTP_MAX_MSG_SIZE], value[HTTP_MAX_MSG_SIZE];
+				// 	sscanf(param, "%[^=]=%s", name, value);
+				// 	strcpy(parameters[i].name, name);
+				// 	strcpy(parameters[i].value, value);
+				// 	param = strtok(NULL, "&");
+				// }
+
+				// replace + and % with spaces
+				for (int i = 0; i < strlen(path); i++)
 				{
-					perror("Error sending echo");
+					/* replace any + and % with space */
+					if (path[i] == '+')
+					{
+						/* replace with space */
+						path[i] = ' ';
+					}
+					
+				}
+				
+
+				// Get file
+				strcat(filePath, HTTP_BASE_PATH);
+				strcat(filePath, path);
+
+				if (!strcmp(command, GET_REQUEST))
+				{
+					/* Requesting file */
+					printf("file path: %s\n", filePath);
+					file = fopen(filePath, "r");
+
+					if (file)
+					{
+						/* valid file */
+						char* ext = strrchr(filePath, '.');
+
+						fseek(file, 0L, SEEK_END);
+						fileLen = ftell(file);
+						rewind(file);
+
+						snprintf(response, HTTP_MAX_MSG_SIZE*6,
+						"%s 200 OK\r\nAccept-Ranges: bytes\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
+						version, ext + 1, fileLen);
+
+						responseLen = strlen(response);
+
+						size_t filebytesread = fread(response + responseLen, 1, fileLen, file);
+						responseLen += filebytesread;
+					}
+					else
+					{
+						/* invalid file */
+						snprintf(response, HTTP_MAX_MSG_SIZE*6,
+						"%s 404 File Not Found",
+						version);
+					}
+					printf("%s\n", response);
+				}
+				
+				// send data to HTTP client
+				if ( (bytesWritten = write(connection, response, responseLen)) < 0 )
+				{
+					perror("Error sending file");
 					exit(-1);
 				}
 				else
 				{			
-					printf("Bytes echoed: %d\n", bytesWritten);
+					printf("Bytes sent: %d\n", bytesWritten);
 				}
+
+				free(response);
+				free(filePath);
 				
 			}  // end of child inner-while
 			close(sock);
@@ -205,7 +283,12 @@ int main(int argc, char** argv) {
             close(connection);
         }
     }	// end of outer loop
+	// Free request buffers
 	free(buffer);
+	free(command);
+	free(free);
+	free(version);
+
 	// should never get here
 	return(0);
 }
