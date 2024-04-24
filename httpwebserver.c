@@ -224,6 +224,12 @@ int main(int argc, char** argv) {
 
 				if (incParams)
 				{
+					FILE* csv = fopen("./httpfiles/cards.csv", "a");
+					if (csv == NULL)
+					{
+						perror("Error opening file!\n");
+					}
+					
 					param = strtok(rawparam, "&");
 					while (param != NULL)
 					{
@@ -231,13 +237,16 @@ int main(int argc, char** argv) {
 						if(sscanf(param, "%[^=]=%s", name, value) == 2)
 						{
 							printf("Parameter: %s = %s\n", name, value);
+							fprintf(csv, "%s,", value);
 						}
 						else
 						{
-							printf("Failed ot parse parameter: %s\n", param);
+							printf("Failed to parse parameter: %s\n", param);
 						}
 						param = strtok(NULL, "&");
 					}
+					fprintf(csv, "\n");
+					fclose(csv);
 				}
 
 				// replace + with spaces
@@ -279,6 +288,8 @@ int main(int argc, char** argv) {
 
 						size_t filebytesread = fread(response + responseLen, 1, fileLen, file);
 						responseLen += filebytesread;
+
+						fclose(file);
 					}
 					else
 					{
@@ -316,7 +327,7 @@ int main(int argc, char** argv) {
 	// Free request buffers
 	free(buffer);
 	free(command);
-	free(free);
+	free(query);
 	free(version);
 
 	// should never get here
