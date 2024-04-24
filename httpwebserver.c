@@ -1,6 +1,19 @@
 /******************************************************************************
  * HTTP Server
  * CPE 3300, Daniel Nimsgern
+ * 
+ * This HTTP server uses the machines port 80 to serve a HTML web page that
+ * utilizes text images and audio. Once the client returns the requested values
+ * the server saves those values and serves a new text and audio HTML page.
+ * 
+ * I had many challenges thought the development many around where to start
+ * when parsing the the HTTP request but with the help of stack overflow and 
+ * Zach I was able to come up with a method that works. I then did debugging
+ * using valgrind and Microsoft CoPilot which was able to easily read my files
+ * and tell me exactly what was wrong and give a suggestion on how to fix it.
+ * almost every fix it suggested needed some tweaking to fit more with how I
+ * wanted the program to operate but I was pleasantly surprised how well
+ * CoPilot worked as a debugging assistant.
  *
  * Build with gcc -o httpwebserver httpwebserver.c
  *****************************************************************************/
