@@ -306,12 +306,14 @@ int main(int argc, char** argv) {
 						rewind(file);
 
 						snprintf(response, HTTP_MAX_MSG_SIZE*10,
-						"%s 200 OK\r\nAccept-Ranges: bytes\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
+						"%s 200 OK\r\nAccept-Ranges: bytes\r\nContent-Type: %s"
+						"\r\nContent-Length: %d\r\n\r\n",
 						version, ext + 1, fileLen);
 
 						responseLen = strlen(response);
 
-						size_t filebytesread = fread(response + responseLen, 1, fileLen, file);
+						size_t filebytesread = fread(response + responseLen, 1,
+						                             fileLen, file);
 						responseLen += filebytesread;
 
 						fclose(file);
@@ -327,7 +329,9 @@ int main(int argc, char** argv) {
 				}
 				
 				// send data to HTTP client
-				if ( (bytesWritten = write(connection, response, responseLen)) < 0 )
+				if ((bytesWritten = write(connection,
+				                          response,
+										  responseLen)) < 0)
 				{
 					perror("Error sending file");
 					exit(-1);
