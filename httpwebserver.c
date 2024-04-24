@@ -23,11 +23,9 @@
  |          Global Variables
  ============================================================================*/
 
-/* Network definitions */
+/* HTTP definitions */
 #define DEFAULT_HTTP_PORT   (int)   80
 #define HTTP_MAX_MSG_SIZE   (int)   1000000
-
-/* HTTP definitions */
 #define HTTP_BASE_PATH		(char*) "./httpfiles"
 #define MAX_PATH_LENGTH		(int)	1000
 #define GET_REQUEST			(char*) "GET"
@@ -139,7 +137,7 @@ int main(int argc, char** argv) {
 	// to console and back to source
 	char* buffer = calloc(HTTP_MAX_MSG_SIZE*3, sizeof(char));
 	char* command = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
-	char* path = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
+	char* query = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
 	char* version = calloc(HTTP_MAX_MSG_SIZE, sizeof(char));
 	struct sockaddr_in callingDevice;
 	socklen_t callingDevice_len;
@@ -169,6 +167,8 @@ int main(int argc, char** argv) {
         // Child Process
 		if (pid == 0)
 		{		
+			int incParams = 0;
+
             close(sock);
 			// ready to r/w - another loop - it will be broken when the
             // connection is closed
@@ -192,24 +192,55 @@ int main(int argc, char** argv) {
 				printf("Received HTTP request\n");
 
 				// Parse request
-				sscanf(buffer, "%s %s %s", command, path, version);
-				printf("%s %s %s\n", command, path, version);
+				sscanf(buffer, "%s %s %s", command, query, version);
+				printf("%s %s %s\n", command, query, version);
 
-				// char* path = strtok(path, "?");
-				// char* rawparam = strtok(NULL, "?");
+				if (strchr(query, '?') != NULL)
+				{
+					incParams = 1;
+					printf("detected params\n");
+				}
+				
+				char path[1000];
+				char rawparam[1000];
+				char* param;
 
-				// char* param = strtok(rawparam, "&");
-				// while (param != NULL)
-				// {
-				// 	int i = 0;
-				// 	char name[HTTP_MAX_MSG_SIZE], value[HTTP_MAX_MSG_SIZE];
-				// 	sscanf(param, "%[^=]=%s", name, value);
-				// 	strcpy(parameters[i].name, name);
-				// 	strcpy(parameters[i].value, value);
-				// 	param = strtok(NULL, "&");
-				// }
+				if (incParams)
+				{
+					char* tempPath = strtok(query, "?");
+					strcpy(path, tempPath);
+					printf("Path: %s\n", path);
+					char* tempRawparam = strtok(NULL, "?");
+					strcpy(rawparam, tempRawparam);
+					printf("Parameters: %s\n", rawparam);
+				}
+				else
+				{
+					strcpy(path, query);
+					printf("%s\n",path);
+				}
 
-				// replace + and % with spaces
+				printf("%s %s\n", path, rawparam);
+
+				if (incParams)
+				{
+					param = strtok(rawparam, "&");
+					while (param != NULL)
+					{
+						char name[HTTP_MAX_MSG_SIZE], value[HTTP_MAX_MSG_SIZE];
+						if(sscanf(param, "%[^=]=%s", name, value) == 2)
+						{
+							printf("Parameter: %s = %s\n", name, value);
+						}
+						else
+						{
+							printf("Failed ot parse parameter: %s\n", param);
+						}
+						param = strtok(NULL, "&");
+					}
+				}
+
+				// replace + with spaces
 				for (int i = 0; i < strlen(path); i++)
 				{
 					/* replace any + and % with space */
@@ -221,7 +252,6 @@ int main(int argc, char** argv) {
 					
 				}
 				
-
 				// Get file
 				strcat(filePath, HTTP_BASE_PATH);
 				strcat(filePath, path);
