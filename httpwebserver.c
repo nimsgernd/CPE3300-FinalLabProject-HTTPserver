@@ -167,7 +167,6 @@ int main(int argc, char** argv) {
         // Child Process
 		if (pid == 0)
 		{		
-			int incParams = 0;
 
             close(sock);
 			// ready to r/w - another loop - it will be broken when the
@@ -175,7 +174,8 @@ int main(int argc, char** argv) {
 			while(1)
 			{
 				char* filePath = calloc(MAX_PATH_LENGTH, sizeof(char));
-				char* response = calloc(HTTP_MAX_MSG_SIZE*6, sizeof(char));
+				char* response = calloc(HTTP_MAX_MSG_SIZE*10, sizeof(char));
+				int incParams = 0;
 				int responseLen;
 
 				// read message
@@ -185,6 +185,12 @@ int main(int argc, char** argv) {
 				{	// socket closed
 					printf("====Client Disconnected====\n");
 					close(connection);
+					free(buffer);
+					free(command);
+					free(query);
+					free(version);
+					free(filePath);
+					free(response);
 					break;  // break the inner while loop
 				}
 			
@@ -219,8 +225,6 @@ int main(int argc, char** argv) {
 					strcpy(path, query);
 					printf("%s\n",path);
 				}
-
-				printf("%s %s\n", path, rawparam);
 
 				if (incParams)
 				{
@@ -262,6 +266,14 @@ int main(int argc, char** argv) {
 				}
 				
 				// Get file
+				if (!strcmp(command, GET_REQUEST))
+				{
+					printf("file path preformatted: %s\n", path);
+					if (strcmp(path, "/") == 0)
+					{
+						strcpy(path, "/index.html");
+					}
+				}
 				strcat(filePath, HTTP_BASE_PATH);
 				strcat(filePath, path);
 
@@ -280,7 +292,7 @@ int main(int argc, char** argv) {
 						fileLen = ftell(file);
 						rewind(file);
 
-						snprintf(response, HTTP_MAX_MSG_SIZE*6,
+						snprintf(response, HTTP_MAX_MSG_SIZE*10,
 						"%s 200 OK\r\nAccept-Ranges: bytes\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
 						version, ext + 1, fileLen);
 
